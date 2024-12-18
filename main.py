@@ -1,103 +1,177 @@
-# Kelompok 2 RB
-
 import tkinter as tk
-from tkinter import messagebox, simpledialog
+from tkinter import messagebox
+from queue import Queue
 
-# DATA
-# Dictionary untuk menyimpan username dan password
-users = {"admin": "1234"}  # Username dan password
-questions = []  # List soal, setiap soal adalah dictionary dengan kunci 'question' dan 'answer'
-current_user = None  # Variabel untuk menyimpan user yang sedang login
-score = 0  # Skor pengguna saat menjawab kuis
+# Struktur data queue untuk menyimpan soal
+question_queue = Queue()
+score = 0
 
-# FUNCTIONALITY
-# Fungsi untuk login ke aplikasi
+# Data login (username dan password sederhana)
+users = {}
+
+# Fungsi untuk registrasi user baru
+def register_user():
+    new_username = reg_username_entry.get()
+    new_password = reg_password_entry.get()
+
+    if new_username and new_password:
+        if new_username in users:
+            messagebox.showerror("Error", "Username sudah terdaftar")
+        else:
+            users[new_username] = new_password
+            messagebox.showinfo("Berhasil", "Registrasi berhasil! Silakan login.")
+            register_window.destroy()
+    else:
+        messagebox.showerror("Error", "Username dan password tidak boleh kosong")
+
+# Fungsi login
 def login():
-    global current_user
-    username = simpledialog.askstring("Login", "Masukkan username:")
-    password = simpledialog.askstring("Login", "Masukkan password:", show='*')
+    username = username_entry.get()
+    password = password_entry.get()
+
     if username in users and users[username] == password:
-        current_user = username  # Set user yang sedang login
         messagebox.showinfo("Login Berhasil", f"Selamat datang, {username}!")
-        show_main_menu()  # Tampilkan menu utama setelah login berhasil
+        login_window.destroy()
+        main_app(username)
     else:
         messagebox.showerror("Login Gagal", "Username atau password salah")
 
-# Fungsi untuk menambahkan soal baru
+# Fungsi utama aplikasi setelah login
+def main_app(username):
+    global question_entry, answer_entry, score_label, question_label, answer_input, main_window
+
+    main_window = tk.Tk()
+    main_window.title("Sistem Manajemen Soal")
+    
+    # Full screen mode
+    main_window.attributes("-fullscreen", True)
+    main_window.configure(bg="#2E2E2E")  # Dark grey background
+
+    tk.Label(main_window, text=f"Halo, {username}!", font=("Arial", 16, "bold"), fg="#FFF", bg="#2E2E2E").grid(row=0, column=0, columnspan=2, pady=20)
+
+    # Input soal
+    tk.Label(main_window, text="Soal", fg="#FFF", bg="#2E2E2E").grid(row=1, column=0, pady=5)
+    question_entry = tk.Entry(main_window, width=50, font=("Arial", 12), bd=2)
+    question_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Label(main_window, text="Jawaban", fg="#FFF", bg="#2E2E2E").grid(row=2, column=0, pady=5)
+    answer_entry = tk.Entry(main_window, width=50, font=("Arial", 12), bd=2)
+    answer_entry.grid(row=2, column=1, padx=10, pady=5)
+
+    # Tombol operasi
+    tk.Button(main_window, text="Tambah Soal", command=add_question, bg="#4CAF50", fg="white").grid(row=3, column=0, pady=10)
+    tk.Button(main_window, text="Simpan Soal", command=save_questions, bg="#2196F3", fg="white").grid(row=3, column=1, pady=10)
+
+    # Menjawab soal
+    tk.Label(main_window, text="Pertanyaan Saat Ini", fg="#FFF", font=("Arial", 14), bg="#2E2E2E").grid(row=5, column=0, columnspan=2, pady=15)
+    question_label = tk.Label(main_window, text="Belum ada soal", fg="#FFF", font=("Arial", 12), bg="#2E2E2E")
+    question_label.grid(row=6, column=0, columnspan=2, pady=10)
+
+    tk.Label(main_window, text="Jawaban Anda", fg="#FFF", bg="#2E2E2E").grid(row=7, column=0, pady=5)
+    answer_input = tk.Entry(main_window, width=50, font=("Arial", 12), bd=2)
+    answer_input.grid(row=7, column=1, padx=10, pady=5)
+
+    tk.Button(main_window, text="Jawab Soal", command=answer_question, bg="#4CAF50", fg="white").grid(row=8, column=0, pady=10)
+
+    score_label = tk.Label(main_window, text=f"Skor: {score}", font=("Arial", 12, "bold"), fg="#FFF", bg="#2E2E2E")
+    score_label.grid(row=8, column=1, pady=10)
+
+    main_window.mainloop()
+
+# Fungsi untuk menambah soal ke dalam queue
 def add_question():
-    question = simpledialog.askstring("Tambah Soal", "Masukkan soal:")
-    answer = simpledialog.askstring("Tambah Jawaban", "Masukkan jawaban benar:")
+    question = question_entry.get()
+    answer = answer_entry.get()
+
     if question and answer:
-        questions.append({"question": question, "answer": answer})  # Tambahkan soal ke list
-        messagebox.showinfo("Sukses", "Soal berhasil ditambahkan")
+        question_queue.put((question, answer))
+        messagebox.showinfo("Berhasil", "Soal berhasil ditambahkan")
+        question_entry.delete(0, tk.END)
+        answer_entry.delete(0, tk.END)
     else:
-        messagebox.showerror("Error", "Soal atau jawaban tidak boleh kosong")
+        messagebox.showerror("Error", "Soal dan jawaban tidak boleh kosong")
 
-# Fungsi untuk mengedit soal yang sudah ada
-def edit_question():
-    show_questions()  # Tampilkan semua soal
-    index = simpledialog.askinteger("Edit Soal", "Masukkan nomor soal yang ingin diubah:")
-    if index and 0 < index <= len(questions):
-        new_question = simpledialog.askstring("Edit Soal", "Masukkan soal baru:")
-        new_answer = simpledialog.askstring("Edit Jawaban", "Masukkan jawaban baru:")
-        if new_question and new_answer:
-            questions[index - 1]["question"] = new_question  # Update soal
-            questions[index - 1]["answer"] = new_answer  # Update jawaban
-            messagebox.showinfo("Sukses", "Soal berhasil diubah")
-        else:
-            messagebox.showerror("Error", "Soal atau jawaban tidak boleh kosong")
-    else:
-        messagebox.showerror("Error", "Nomor soal tidak valid")
-
-# Fungsi untuk menghapus soal
-def delete_question():
-    show_questions()  # Tampilkan semua soal
-    index = simpledialog.askinteger("Hapus Soal", "Masukkan nomor soal yang ingin dihapus:")
-    if index and 0 < index <= len(questions):
-        questions.pop(index - 1)  # Hapus soal berdasarkan indeks
-        messagebox.showinfo("Sukses", "Soal berhasil dihapus")
-    else:
-        messagebox.showerror("Error", "Nomor soal tidak valid")
-
-# Fungsi untuk menampilkan daftar semua soal
-def show_questions():
-    if not questions:
-        messagebox.showinfo("Soal Kosong", "Belum ada soal yang ditambahkan")
+# Fungsi untuk menyimpan semua soal ke file
+def save_questions():
+    if question_queue.empty():
+        messagebox.showerror("Error", "Tidak ada soal untuk disimpan")
         return
-    text = "\n".join([f"{i+1}. {q['question']}" for i, q in enumerate(questions)])  # Format daftar soal
-    messagebox.showinfo("Daftar Soal", text)
 
-# Fungsi untuk memulai kuis
-def quiz():
+    with open("questions.txt", "w") as file:
+        temp_queue = Queue()
+        while not question_queue.empty():
+            question, answer = question_queue.get()
+            file.write(f"{question}|{answer}\n")
+            temp_queue.put((question, answer))
+        while not temp_queue.empty():
+            question_queue.put(temp_queue.get())
+
+    messagebox.showinfo("Berhasil", "Soal berhasil disimpan ke file")
+
+# Fungsi untuk menjawab soal dan menampilkan skor
+def answer_question():
     global score
-    score = 0  # Reset skor
-    if not questions:
-        messagebox.showinfo("Soal Kosong", "Belum ada soal untuk dijawab")
+
+    if question_queue.empty():
+        messagebox.showinfo("Info", "Tidak ada soal yang tersedia")
         return
-    for q in questions:
-        answer = simpledialog.askstring("Kuis", q['question'])  # Tanya soal kepada user
-        if answer and answer.lower() == q['answer'].lower():  # Cek jawaban (case-insensitive)
+
+    question, correct_answer = question_queue.get()
+    question_label.config(text=question)
+
+    def check_answer():
+        user_answer = answer_input.get()
+
+        if user_answer.lower() == correct_answer.lower():
+            global score
             score += 1
-    messagebox.showinfo("Skor", f"Kuis selesai! Skor Anda: {score}/{len(questions)}")
+            messagebox.showinfo("Benar", "Jawaban benar!")
+        else:
+            messagebox.showerror("Salah", f"Jawaban salah! Jawaban benar: {correct_answer}")
 
-# MAIN MENU
-# Fungsi untuk menampilkan menu utama aplikasi
-def show_main_menu():
-    window = tk.Toplevel(root)  # Buat window baru untuk menu utama
-    window.title("Menu Utama")
-    tk.Label(window, text=f"Selamat datang, {current_user}!", font=("Arial", 14)).pack()
+        score_label.config(text=f"Skor: {score}")
+        answer_input.delete(0, tk.END)
 
-    # Tombol-tombol di menu utama
-    tk.Button(window, text="Tambah Soal", command=add_question).pack(fill="x")
-    tk.Button(window, text="Edit Soal", command=edit_question).pack(fill="x")
-    tk.Button(window, text="Hapus Soal", command=delete_question).pack(fill="x")
-    tk.Button(window, text="Lihat Semua Soal", command=show_questions).pack(fill="x")
-    tk.Button(window, text="Mulai Kuis", command=quiz).pack(fill="x")
-    tk.Button(window, text="Keluar", command=window.destroy).pack(fill="x")
+    tk.Button(main_window, text="Submit Jawaban", command=check_answer, bg="#4CAF50", fg="white").grid(row=7, column=1, pady=5)
 
-# ROOT WINDOW
-root = tk.Tk()
-root.withdraw()  # Sembunyikan root window utama
-root.title("Aplikasi Kuis")
-login()  # Panggil fungsi login pertama kali
-root.mainloop()
+# Fungsi untuk membuka jendela registrasi
+def open_register_window():
+    global reg_username_entry, reg_password_entry, register_window
+
+    register_window = tk.Toplevel()
+    register_window.title("Registrasi")
+    register_window.configure(bg="#2E2E2E")
+
+    tk.Label(register_window, text="Username", fg="#FFF", bg="#2E2E2E").grid(row=0, column=0)
+    reg_username_entry = tk.Entry(register_window)
+    reg_username_entry.grid(row=0, column=1, padx=10, pady=5)
+
+    tk.Label(register_window, text="Password", fg="#FFF", bg="#2E2E2E").grid(row=1, column=0)
+    reg_password_entry = tk.Entry(register_window, show="*")
+    reg_password_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Button(register_window, text="Daftar", command=register_user, bg="#4CAF50", fg="white").grid(row=2, column=0, columnspan=2, pady=10)
+
+# Login window
+login_window = tk.Tk()
+login_window.title("Login")
+login_window.configure(bg="#2E2E2E")
+
+# Full screen mode for login
+login_window.attributes("-fullscreen", True)
+
+# Username input
+tk.Label(login_window, text="Username", fg="#FFF", bg="#2E2E2E").grid(row=0, column=0)
+username_entry = tk.Entry(login_window)
+username_entry.grid(row=0, column=1, padx=10, pady=5)
+
+# Password input
+tk.Label(login_window, text="Password", fg="#FFF", bg="#2E2E2E").grid(row=1, column=0)
+password_entry = tk.Entry(login_window, show="*")
+password_entry.grid(row=1, column=1, padx=10, pady=5)
+
+# Login and Register buttons
+tk.Button(login_window, text="Login", command=login, bg="#4CAF50", fg="white").grid(row=2, column=0, pady=10)
+tk.Button(login_window, text="Daftar", command=open_register_window, bg="#2196F3", fg="white").grid(row=2, column=1, pady=10)
+
+login_window.mainloop()
